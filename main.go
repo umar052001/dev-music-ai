@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 // Configuration constants. Change these to tweak the server.
@@ -36,12 +37,20 @@ func main() {
 	mux := http.NewServeMux()
 	registerRoutes(mux)
 
+	srv := &http.Server{
+		Addr:         addr,
+		Handler:      securityHeaders(mux),
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 360 * time.Second, // long enough for yt-dlp downloads
+		IdleTimeout:  60 * time.Second,
+	}
+
 	log.Printf("Dev Music running on http://localhost%s", addr)
 	log.Printf("Downloads: %s", dlRoot)
 	log.Printf("Database: %s", dbPath)
 	lc := getLLMConfig()
 	log.Printf("LLM: provider=%s model=%s fast=%s base=%s", lc.Provider, lc.Model, lc.FastModel, lc.APIBase)
-	log.Fatal(http.ListenAndServe(addr, mux))
+	log.Fatal(srv.ListenAndServe())
 }
 
 // registerRoutes attaches every API endpoint and the SPA handler to mux.

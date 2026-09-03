@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 // writeJSON encodes v to w as JSON, logging any encoding error.
@@ -75,10 +76,34 @@ func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// securityHeaders sets sensible response security headers on every response.
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("X-Frame-Options", "DENY")
+		h.Set("Referrer-Policy", "no-referrer")
+		h.Set("Cache-Control", "no-store")
+		next.ServeHTTP(w, r)
+	})
+}
+
 // spaHandler serves the built frontend, falling back to index.html for any
-// path that isn't a real file (single-page app routing).
+// path that isn't a real file (single-page app routing). The resolved path is
+// validated to stay inside frontendDir so a crafted URL cannot read files
+// outside the built assets.
 func spaHandler(w http.ResponseWriter, r *http.Request) {
-	path := filepath.Join(frontendDir, r.URL.Path)
+	clean := filepath.Clean(r.URL.Path)
+	if strings.HasPrefix(clean, "/../") {
+		http.NotFound(w, r)
+		return
+	}
+	path := filepath.Join(frontendDir, filepath.FromSlash(clean))
+	frontendRoot := filepath.Join(filepath.Clean(frontendDir))
+	if path != frontendRoot && !strings.HasPrefix(path, frontendRoot+string(os.PathSeparator)) {
+		http.NotFound(w, r)
+		return
+	}
 	if info, err := os.Stat(path); err == nil && !info.IsDir() {
 		http.ServeFile(w, r, path)
 		return

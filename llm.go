@@ -76,12 +76,12 @@ type LLMConfig struct {
 func DefaultLLMConfig() LLMConfig {
 	return LLMConfig{
 		Provider:         "ollama",
-		Model:            "kimi-k2.6:cloud",
+		Model:            "gemma4:cloud",
 		FastModel:        "gemma4:cloud",
 		APIBase:          "http://localhost:11434",
 		TimeoutSec:       300,
 		OllamaLocalModel: "gemma4:latest",
-		OllamaCloudModel: "kimi-k2.6:cloud",
+		OllamaCloudModel: "gemma4:cloud",
 		OpenAIModel:      "gpt-4o-mini",
 		GroqModel:        "llama-3.3-70b-versatile",
 		AnthropicModel:   "claude-sonnet-4-5",

@@ -11,7 +11,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"sync"
 )
 
 const (
@@ -27,12 +26,6 @@ var musicExtSet = map[string]bool{
 
 // dlRoot is the absolute path where downloaded music is stored.
 var dlRoot string
-
-// dlStatus tracks download progress by URL.
-var dlStatus = struct {
-	sync.RWMutex
-	tasks map[string]string
-}{tasks: make(map[string]string)}
 
 // safeName converts an arbitrary string into a filesystem-friendly folder/file
 // name, replacing illegal characters and trimming stray dots/spaces.
@@ -269,17 +262,8 @@ func (fw *flushWriter) Write(p []byte) (int, error) {
 
 // startDownload kicks off an async yt-dlp download for a single URL.
 func startDownload(req DownloadReq) {
-	dlStatus.Lock()
-	dlStatus.tasks[req.URL] = "downloading"
-	dlStatus.Unlock()
-
 	go func() {
-		defer func() {
-			dlStatus.Lock()
-			dlStatus.tasks[req.URL] = "done"
-			dlStatus.Unlock()
-			syncDBWithDisk()
-		}()
+		defer syncDBWithDisk()
 		tmpl := outputTemplate(req.Organization, req.Artist, req.Album)
 		cmd := exec.Command(ytdlp,
 			"-x", "--audio-format", "mp3", "--audio-quality", audioQuality,
@@ -289,9 +273,6 @@ func startDownload(req DownloadReq) {
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			log.Printf("download error %s: %v\n%s", req.URL, err, string(out))
-			dlStatus.Lock()
-			dlStatus.tasks[req.URL] = "error"
-			dlStatus.Unlock()
 			return
 		}
 		log.Printf("downloaded: %s", req.URL)
@@ -299,15 +280,31 @@ func startDownload(req DownloadReq) {
 }
 
 // serveAudioFile serves a local audio file from downloadRoot, setting the
-// correct MIME type and enabling range requests.
+// correct MIME type and enabling range requests. The requested path is
+// validated against dlRoot with os.Root so a crafted path cannot escape the
+// download directory (path-traversal safe).
 func serveAudioFile(w http.ResponseWriter, r *http.Request) {
-	path := strings.TrimPrefix(r.URL.Path, "/api/file/")
-	if path == "" {
+	rel := strings.TrimPrefix(r.URL.Path, "/api/file/")
+	if rel == "" {
 		http.Error(w, "path required", http.StatusBadRequest)
 		return
 	}
-	full := filepath.Join(dlRoot, path)
-	info, err := os.Stat(full)
+	// os.Root resolves relative paths inside dlRoot and rejects attempts to
+	// escape it (e.g. ".." segments), preventing arbitrary file reads.
+	root, err := os.OpenRoot(dlRoot)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	defer root.Close()
+
+	f, err := root.Open(rel)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	defer f.Close()
+	info, err := f.Stat()
 	if err != nil || info.IsDir() {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
@@ -316,11 +313,12 @@ func serveAudioFile(w http.ResponseWriter, r *http.Request) {
 		".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".flac": "audio/flac",
 		".wav": "audio/wav", ".ogg": "audio/ogg", ".opus": "audio/opus", ".aac": "audio/aac",
 	}
-	if ct, ok := contentTypes[strings.ToLower(filepath.Ext(full))]; ok {
+	if ct, ok := contentTypes[strings.ToLower(filepath.Ext(info.Name()))]; ok {
 		w.Header().Set("Content-Type", ct)
 	}
 	w.Header().Set("Accept-Ranges", "bytes")
-	http.ServeFile(w, r, full)
+	// ServeContent handles Range requests and sets Last-Modified/Content-Length.
+	http.ServeContent(w, r, info.Name(), info.ModTime(), f)
 }
 
 // buildLibrary returns the download folder grouped by artist and album.

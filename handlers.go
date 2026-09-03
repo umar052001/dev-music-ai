@@ -192,7 +192,7 @@ func handleLibraryPlaylist(w http.ResponseWriter, r *http.Request) {
 
 	playlist, err := buildLibraryPlaylist(req.Description, req.TrackCount)
 	if err != nil {
-		writeJSON(w, map[string]interface{}{"error": libraryPlaylistError, "details": err.Error()})
+		writeJSON(w, map[string]interface{}{"error": libraryPlaylistError})
 		return
 	}
 	writeJSON(w, playlist)
