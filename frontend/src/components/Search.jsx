@@ -56,7 +56,7 @@ export default function Search() {
     setHasSearched(true)
     setAllResults([])
     setVisibleCount(PAGE_SIZE)
-    logAct('search', null, '', searchQ)
+    logAct('search', null, '', '', searchQ.trim())
     try {
       const res = await fetch('/api/search', {
         method: 'POST',
@@ -362,7 +362,7 @@ export default function Search() {
               {r.duration > 0 ? `${Math.floor(r.duration / 60)}:${String(Math.floor(r.duration % 60)).padStart(2, '0')}` : '—'}
             </span>
             <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
-              <button onClick={() => play(r, visibleResults)} style={{
+              <button onClick={() => play(r, visibleResults)} aria-label={`Play ${r.title}`} title={`Play ${r.title}`} style={{
                 background: 'none', border: `1px solid ${theme.border}`,
                 color: theme.text, padding: '0.4rem 0.6rem', borderRadius: 6, cursor: 'pointer',
                 fontSize: '0.9rem', transition: 'all 0.15s',
@@ -370,7 +370,7 @@ export default function Search() {
                 onMouseEnter={e => { e.target.style.background = theme.text; e.target.style.color = theme.bg }}
                 onMouseLeave={e => { e.target.style.background = 'none'; e.target.style.color = theme.text }}
               >▶</button>
-              <button onClick={() => downloadTrack(r)} disabled={downloading.has(r.id)} style={{
+              <button onClick={() => downloadTrack(r)} disabled={downloading.has(r.id)} aria-label={`Download ${r.title}`} title="Download as MP3" style={{
                 background: 'none', border: `1px solid ${theme.border}`,
                 color: theme.text, padding: '0.4rem 0.6rem', borderRadius: 6, cursor: 'pointer',
                 fontSize: '0.9rem', opacity: downloading.has(r.id) ? 0.4 : 1,

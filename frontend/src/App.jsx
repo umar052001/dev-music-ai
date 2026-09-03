@@ -69,10 +69,13 @@ function AppInner() {
         maxWidth: 1200, width: '100%', margin: '0 auto', position: 'relative', zIndex: 2,
         transition: 'padding 0.3s',
       }}>
-        <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }} role="tablist" aria-label="App sections">
           {tabs.map(t => (
             <button
               key={t.id}
+              role="tab"
+              aria-selected={tab === t.id}
+              aria-controls={`panel-${t.id}`}
               onClick={() => setTab(t.id)}
               title={t.ai && !llmAvailable ? 'AI unavailable — configure in Settings' : ''}
               style={{
@@ -82,37 +85,46 @@ function AppInner() {
                 border: `1px solid ${tab === t.id ? theme.text : theme.border}`,
                 borderRadius: 999, cursor: 'pointer', transition: 'all 0.2s',
                 opacity: t.ai && !llmAvailable ? 0.4 : 1,
+                outline: 'none',
               }}
+              onFocus={e => { e.target.style.boxShadow = `0 0 0 3px ${theme.accent}44` }}
+              onBlur={e => { e.target.style.boxShadow = 'none' }}
               disabled={t.ai && !llmAvailable}
             >
               {t.label}
             </button>
           ))}
-          <button onClick={() => setAdjusterOpen(true)} style={{
+          <button onClick={() => setAdjusterOpen(true)} aria-label="Open theme settings" style={{
             marginLeft: 'auto', padding: '0.5rem 1rem', fontSize: '0.9rem',
             background: 'transparent', color: theme.textSecondary,
             border: `1px solid ${theme.border}`, borderRadius: 999, cursor: 'pointer',
-            transition: 'all 0.2s',
-          }}>
+            transition: 'all 0.2s', outline: 'none',
+          }}
+            onFocus={e => { e.target.style.boxShadow = `0 0 0 3px ${theme.accent}44` }}
+            onBlur={e => { e.target.style.boxShadow = 'none' }}
+          >
             ⚙ Theme
           </button>
-          <button onClick={() => setLlmOpen(true)} style={{
+          <button onClick={() => setLlmOpen(true)} aria-label={`AI settings (${llmAvailable ? 'available' : 'off'})`} aria-pressed={llmOpen} style={{
             padding: '0.5rem 1rem', fontSize: '0.9rem',
             background: llmAvailable ? theme.surface : 'transparent',
             color: llmAvailable ? theme.text : theme.textMuted,
             border: `1px solid ${theme.border}`, borderRadius: 999, cursor: 'pointer',
-            transition: 'all 0.2s',
-          }}>
+            transition: 'all 0.2s', outline: 'none',
+          }}
+            onFocus={e => { e.target.style.boxShadow = `0 0 0 3px ${theme.accent}44` }}
+            onBlur={e => { e.target.style.boxShadow = 'none' }}
+          >
             ✦ AI{llmAvailable ? '' : ' (off)'}
           </button>
         </div>
 
         <div ref={contentRef}>
-          {tab === 'search' && <Search />}
-          {tab === 'batch' && llmAvailable && <BatchImport />}
-          {tab === 'all' && <AllSongs />}
-          {tab === 'library' && <Library />}
-          {tab === 'activity' && <Activity />}
+          {tab === 'search' && <div id="panel-search" role="tabpanel"><Search /></div>}
+          {tab === 'batch' && llmAvailable && <div id="panel-batch" role="tabpanel"><BatchImport /></div>}
+          {tab === 'all' && <div id="panel-all" role="tabpanel"><AllSongs /></div>}
+          {tab === 'library' && <div id="panel-library" role="tabpanel"><Library /></div>}
+          {tab === 'activity' && <div id="panel-activity" role="tabpanel"><Activity /></div>}
         </div>
 
         {/* Persistent download status (server-backed, survives refresh/tab switch) */}

@@ -34,9 +34,14 @@ done, every song is in the right folder with a clean name.
 - Shows a little animated visualizer while music plays.
 
 ### 💾 Download music properly
-- Save any song as a high-quality MP3 file.
+- Save any song as a high-quality MP3 file — one at a time, or grab an entire
+  search's results with **Download All**.
 - Files land in folders by **artist → album** (or just artist, your pick).
 - Clean, normal file names — no `-official-video-HD` junk.
+- **Live, persistent download progress**: every download (single, Download All,
+  or batch) shows a status panel — queued → running → done / failed — that keeps
+  updating across page refreshes and tab switches because it's saved in the
+  local database.
 - Everything is saved on *your* machine. No weird uploads anywhere.
 
 ### 🧠 AI helpers (the smart part)
@@ -45,19 +50,21 @@ for the boring, messy parts:
 
 - **Title clean-up** → turns `"Song Name - Official Music Video HD"` into
   `"Song Name"` (with the right artist).
-- **Smart suggestions** → the "For You" tab thinks about what you listen to and
-  suggests new songs you might like.
+- **Smart suggestions** → on the **Search** page, a "Suggested for you" panel
+  thinks about what you listen to and suggests new songs you might like.
 - **Playlist ideas** → describe a mood in one line ("late night driving") and
-  it builds a playlist for you.
+  it builds a playlist for you — either ideas to search for, or a playlist made
+  entirely from the songs you've already downloaded.
 - **Batch import** → paste a whole messy list of songs and it structures it
   into clean title / artist / link rows, finds anything that's missing a link,
-  and downloads them all.
+  and downloads them all with live progress.
 
 ### 🗂️ Your stuff, saved
 - A **library** of everything you've downloaded, browsable by artist.
-- An **activity log** of the songs you look at and play.
-- Your preferences and search history are stored in a local database — private,
-  on your computer.
+- An **All Songs** list of every track you have, with search and pagination.
+- An **activity log** of the songs you search, play, skip, and download — with
+  a nice grouped, auto-updating timeline. Your preferences and search history
+  are stored in a local database — private, on your computer.
 
 ### 🎨 A clean, friendly look
 - Flat, modern design with **rounded corners** and **pill-shaped tabs**.
@@ -104,10 +111,19 @@ start with `/api/...`). The frontend calls these; the backend answers.
 
 ## What's under the hood
 
-**Backend** (`main.go` — most of the app logic)
+**Backend** (Go — the server + all the app logic)
 - Handles every `/api/...` request: search, stream, download, library, activity,
-  suggestions, and the batch importer.
-- Runs background download jobs and reports progress while they work.
+  suggestions, batch import, AI settings, and the download status panel.
+- Runs background download jobs (single, Download All, or batch) and records
+  each one's progress in the database so the frontend can show live, persistent
+  status.
+
+**Download manager** (`downloads.go`)
+- One place that runs every download: single tracks, "Download All", and batch
+  imports, all as background jobs.
+- Each download is stored in SQLite with a status — queued, running, done, or
+  failed (plus the resulting file path) — so progress survives page refreshes,
+  tab switches, and even server restarts.
 
 **AI layer** (`llm.go` — the part that talks to AI models)
 - One shared way to ask **any** of these providers:
@@ -129,7 +145,8 @@ start with `/api/...`). The frontend calls these; the backend answers.
   start fresh.
 
 **Database** (`devmusic.db`)
-- A local SQLite file holding your library, activity, and search history.
+- A local SQLite file holding your library, activity, search history, and the
+  status of every download.
 - Entirely on your machine. Nothing is sent to any cloud database.
 
 **Frontend** (`frontend/src/`)
@@ -218,17 +235,20 @@ The browser talks to the backend through these addresses. Each one does one job:
 |----------|--------------|
 | `/api/search` | Search YouTube for a song |
 | `/api/stream` | Stream audio for instant playback |
-| `/api/download` | Download a song as an MP3 |
+| `/api/download` | Download a single song as an MP3 |
+| `/api/downloads` | Enqueue one song or a whole list, returns a `batch_id` |
+| `/api/downloads/status` | Live download progress (per-item + overall) |
 | `/api/library` | List everything you've downloaded |
-| `/api/all-songs` | List every song you've ever looked at |
+| `/api/all-songs` | List every song with pagination |
 | `/api/file/...` | Serve a downloaded audio file |
-| `/api/activity` | Your playback/search activity log |
-| `/api/suggestions` | AI-powered "For You" suggestions |
+| `/api/activity` | Your search/play/download activity log |
+| `/api/suggestions` | AI-powered "Suggested for you" |
 | `/api/playlist-suggest` | AI builds a playlist from a mood |
+| `/api/library/playlist` | AI builds a playlist from your downloaded songs |
 | `/api/clean-title` | AI cleans up a messy song title |
 | `/api/batch/parse` | AI structures a pasted list of songs |
-| `/api/batch/run` | Starts the download job for a list |
-| `/api/batch/status` | Reports download progress |
+| `/api/batch/run` | Starts the batch download job |
+| `/api/batch/status` | Reports batch download progress |
 | `/api/llm/status` | Is the AI provider reachable? |
 | `/api/llm/config` | Read the current AI settings |
 | `/api/llm/config-set` | Save new AI settings |
@@ -239,18 +259,26 @@ The browser talks to the backend through these addresses. Each one does one job:
 
 ```
 dev-music-ai/
-├── main.go              # The whole Go backend (server + all endpoints)
-├── llm.go               # Talks to AI providers (Ollama, OpenAI, Groq, Claude, Gemini)
-├── go.mod / go.sum      # Go dependency files
-├── config.json          # Your AI settings (provider, models, keys) — created on first run
+├── main.go            # Server startup + route registration
+├── handlers.go        # HTTP handlers for the /api/... endpoints
+├── models.go          # Shared data types
+├── store.go           # SQLite database setup + queries
+├── ytdlp.go           # Talks to yt-dlp: search, stream, download, library
+├── downloads.go       # Background download manager + status
+├── batch.go           # Batch import: parse + download jobs
+├── ai.go / llm.go     # AI suggestions + pluggable AI providers
+├── playlist.go        # AI playlist generation
+├── util.go            # Shared helpers
+├── go.mod / go.sum    # Go dependency files
+├── config.json        # Your AI settings (provider, models, keys) — created on first run
 ├── frontend/
-│   ├── package.json     # Frontend dependencies (React, Vite, GSAP)
+│   ├── package.json   # Frontend dependencies (React, Vite, GSAP)
 │   └── src/
-│       ├── App.jsx      # The main page + tab layout
-│       ├── components/  # Search, PlayerBar, Library, BatchImport, LLMSettings, ...
-│       └── context/     # Player state + theme state
-├── downloads/           # Where downloaded music lands (created on first use)
-└── devmusic.db          # Local database: library, activity, history
+│       ├── App.jsx    # The main page + tab layout
+│       ├── components/  # Search, PlayerBar, Activity, BatchImport, DownloadStatus, ...
+│       └── context/   # Player state + theme state
+├── downloads/         # Where downloaded music lands (created on first use)
+└── devmusic.db        # Local database: library, activity, history, download status
 ```
 
 ---
@@ -274,5 +302,6 @@ dev-music-ai/
 - **Backend:** Go, `net/http`, SQLite (`mattn/go-sqlite3`), `yt-dlp`
 - **Frontend:** React 19, Vite, GSAP (animations)
 - **AI:** pluggable providers — Ollama (local + cloud), OpenAI, Groq, Claude, Gemini
+- **Persistent download status:** SQLite-backed progress for single, Download All, and batch downloads
 
 Made by **umar052001**. Pull requests and ideas welcome.

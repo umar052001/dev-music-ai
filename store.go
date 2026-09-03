@@ -127,7 +127,7 @@ func getTopArtists(limit int) []string {
 }
 
 func getRecentActivity(limit int) []ActivityEntry {
-	rows, err := db.Query(`SELECT action, track_name, artist, query, created_at FROM activity ORDER BY created_at DESC LIMIT ?`, limit)
+	rows, err := db.Query(`SELECT id, action, track_name, artist, query, created_at FROM activity ORDER BY created_at DESC LIMIT ?`, limit)
 	if err != nil {
 		return nil
 	}
@@ -135,7 +135,7 @@ func getRecentActivity(limit int) []ActivityEntry {
 	var entries []ActivityEntry
 	for rows.Next() {
 		var e ActivityEntry
-		if rows.Scan(&e.Action, &e.Track, &e.Artist, &e.Query, &e.CreatedAt) == nil {
+		if rows.Scan(&e.ID, &e.Action, &e.Track, &e.Artist, &e.Query, &e.CreatedAt) == nil {
 			entries = append(entries, e)
 		}
 	}

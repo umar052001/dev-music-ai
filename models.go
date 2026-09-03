@@ -66,6 +66,7 @@ type ActivityReq struct {
 }
 
 type ActivityEntry struct {
+	ID        int64  `json:"id"`
 	Action    string `json:"action"`
 	Track     string `json:"track"`
 	Artist    string `json:"artist"`

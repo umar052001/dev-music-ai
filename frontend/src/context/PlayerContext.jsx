@@ -18,11 +18,17 @@ export function PlayerProvider({ children }) {
   })
 
   // Activity logging
-  const logAct = useCallback((action, track, artist, url) => {
+  const logAct = useCallback((action, track, artist, url, query) => {
     fetch('/api/activity', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, track: track?.name || track?.title || '', artist: artist || track?.artist || track?.uploader || '', url: url || track?.url || '' }),
+      body: JSON.stringify({
+        action,
+        track: track?.name || track?.title || '',
+        artist: artist || track?.artist || track?.uploader || '',
+        url: url || track?.url || '',
+        query: query || '',
+      }),
     }).catch(() => {})
   }, [])
 

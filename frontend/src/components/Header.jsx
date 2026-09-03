@@ -26,13 +26,16 @@ export default function Header() {
 
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
         <select
+          aria-label="Theme"
           value={custom ? 'custom' : themeName}
           onChange={e => switchTheme(e.target.value)}
           style={{
             background: theme.surface, color: theme.text,
             border: `1px solid ${theme.border}`, padding: '0.4rem 0.7rem',
-            fontSize: '0.85rem', cursor: 'pointer', borderRadius: 8,
+            fontSize: '0.85rem', cursor: 'pointer', borderRadius: 8, outline: 'none',
           }}
+          onFocus={e => { e.target.style.boxShadow = `0 0 0 3px ${theme.accent}44` }}
+          onBlur={e => { e.target.style.boxShadow = 'none' }}
         >
           {Object.entries(themes).map(([k, v]) => (
             <option key={k} value={k}>{v.name}</option>
