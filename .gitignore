@@ -1,0 +1,26 @@
+# Build output / compiled binary
+music-server
+
+# Databases (local user data)
+*.db
+*.db-shm
+*.db-wal
+
+# Downloaded music (local user data, don't commit)
+downloads/
+
+# Frontend build + deps
+node_modules/
+frontend/dist/
+
+# Local config with keys — never commit
+config.json
+
+# Legacy single-file prototype (dead code, not used by the React app)
+static/
+
+# OS / editor
+.DS_Store
+*.swp
+.env
+.env.*
