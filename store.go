@@ -59,6 +59,21 @@ func initDB(path string) {
 		affinity REAL DEFAULT 0.0
 	);
 
+	CREATE TABLE IF NOT EXISTS downloads (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		batch_id TEXT DEFAULT '',
+		url TEXT NOT NULL,
+		title TEXT DEFAULT '',
+		artist TEXT DEFAULT '',
+		album TEXT DEFAULT '',
+		status TEXT DEFAULT 'queued',   -- queued, running, done, error, cancelled
+		error TEXT DEFAULT '',
+		file_path TEXT DEFAULT '',
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_downloads_batch ON downloads(batch_id);
 	CREATE INDEX IF NOT EXISTS idx_activity_created ON activity(created_at);
 	CREATE INDEX IF NOT EXISTS idx_activity_artist ON activity(artist);
 	CREATE INDEX IF NOT EXISTS idx_activity_action ON activity(action);
@@ -141,4 +156,73 @@ func getRecentSearches(limit int) []string {
 		}
 	}
 	return queries
+}
+
+// DownloadRow is one persisted download record.
+type DownloadRow struct {
+	ID        int64  `json:"id"`
+	BatchID   string `json:"batch_id"`
+	URL       string `json:"url"`
+	Title     string `json:"title"`
+	Artist    string `json:"artist"`
+	Album     string `json:"album"`
+	Status    string `json:"status"`
+	Error     string `json:"error,omitempty"`
+	FilePath  string `json:"file_path,omitempty"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+// createDownload inserts a new queued download and returns its id.
+func createDownload(url, title, artist, album, batchID string) (int64, error) {
+	res, err := db.Exec(`INSERT INTO downloads (url, title, artist, album, batch_id) VALUES (?, ?, ?, ?, ?)`,
+		url, title, artist, album, batchID)
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
+}
+
+// setDownloadStatus updates status/error/file_path and the updated_at stamp.
+func setDownloadStatus(id int64, status string, errorMsg string, filePath string) {
+	db.Exec(`UPDATE downloads SET status=?, error=?, file_path=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+		status, errorMsg, filePath, id)
+}
+
+// listDownloads returns persisted downloads for the given batch (or all recent
+// when batchID is empty), newest-first, capped at limit.
+func listDownloads(batchID string, limit int) ([]DownloadRow, error) {
+	var rows *sql.Rows
+	var err error
+	if batchID != "" {
+		rows, err = db.Query(`SELECT id, batch_id, url, title, artist, album, status, COALESCE(error,''), COALESCE(file_path,''), created_at, updated_at FROM downloads WHERE batch_id=? ORDER BY id DESC LIMIT ?`, batchID, limit)
+	} else {
+		rows, err = db.Query(`SELECT id, batch_id, url, title, artist, album, status, COALESCE(error,''), COALESCE(file_path,''), created_at, updated_at FROM downloads ORDER BY id DESC LIMIT ?`, limit)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []DownloadRow
+	for rows.Next() {
+		var d DownloadRow
+		if rows.Scan(&d.ID, &d.BatchID, &d.URL, &d.Title, &d.Artist, &d.Album, &d.Status, &d.Error, &d.FilePath, &d.CreatedAt, &d.UpdatedAt) == nil {
+			out = append(out, d)
+		}
+	}
+	return out, nil
+}
+
+// downloadSummary aggregates counts for a batch (or all downloads when empty).
+func downloadSummary(batchID string) (total, queued, running, done, failed int) {
+	var q string
+	args := []interface{}{}
+	if batchID != "" {
+		q = `SELECT COUNT(*), COALESCE(SUM(status='queued'),0), COALESCE(SUM(status='running'),0), COALESCE(SUM(status='done'),0), COALESCE(SUM(status='error'),0) FROM downloads WHERE batch_id=?`
+		args = append(args, batchID)
+	} else {
+		q = `SELECT COUNT(*), COALESCE(SUM(status='queued'),0), COALESCE(SUM(status='running'),0), COALESCE(SUM(status='done'),0), COALESCE(SUM(status='error'),0) FROM downloads`
+	}
+	db.QueryRow(q, args...).Scan(&total, &queued, &running, &done, &failed)
+	return
 }

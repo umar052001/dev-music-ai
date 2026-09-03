@@ -58,6 +58,8 @@ func registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/search", corsMiddleware(handleSearch))
 	mux.HandleFunc("/api/stream", corsMiddleware(handleStream))
 	mux.HandleFunc("/api/download", corsMiddleware(handleDownload))
+	mux.HandleFunc("/api/downloads", corsMiddleware(handleDownloadsAdd))
+	mux.HandleFunc("/api/downloads/status", corsMiddleware(handleDownloadsStatus))
 	mux.HandleFunc("/api/library", corsMiddleware(handleLibrary))
 	mux.HandleFunc("/api/all-songs", corsMiddleware(handleAllSongs))
 	mux.HandleFunc("/api/download-path", corsMiddleware(handleDownloadPath))

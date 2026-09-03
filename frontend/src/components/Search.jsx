@@ -3,6 +3,7 @@ import { useTheme } from '../context/ThemeContext'
 import { usePlayer } from '../context/PlayerContext'
 import gsap from 'gsap'
 import LibraryPlaylist from './LibraryPlaylist'
+import DownloadStatus from './DownloadStatus'
 
 const QUICK = [
   'Pakistani classical music', 'Atif Aslam', 'Bilal Saeed',
@@ -28,6 +29,7 @@ export default function Search() {
   const [playlistQuery, setPlaylistQuery] = useState('')
   const [playlist, setPlaylist] = useState(null)
   const [playlistLoading, setPlaylistLoading] = useState(false)
+  const [batchId, setBatchId] = useState(null)
   const listRef = useRef(null)
 
   useEffect(() => {
@@ -100,11 +102,13 @@ export default function Search() {
     setDownloading(prev => new Set([...prev, r.id]))
     logAct('download', { name: r.title }, r.uploader, r.url)
     try {
-      await fetch('/api/download', {
+      const res = await fetch('/api/downloads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: r.url, organization: org }),
+        body: JSON.stringify({ url: r.url, title: r.title, artist: r.uploader, organization: org }),
       })
+      const d = await res.json()
+      if (d && d.batch_id) setBatchId(d.batch_id)
       setTimeout(() => setDownloading(prev => { const n = new Set(prev); n.delete(r.id); return n }), 3000)
     } catch {
       setDownloading(prev => { const n = new Set(prev); n.delete(r.id); return n })
@@ -112,9 +116,17 @@ export default function Search() {
   }
 
   const downloadAll = async () => {
-    for (const r of allResults) {
-      await downloadTrack(r)
-      await new Promise(ok => setTimeout(ok, 500))
+    const items = allResults.map(r => ({ url: r.url, title: r.title, artist: r.uploader }))
+    if (!items.length) return
+    try {
+      const res = await fetch('/api/downloads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organization: org, items }),
+      })
+      const d = await res.json()
+      if (d && d.batch_id) setBatchId(d.batch_id)
+    } catch {
     }
   }
 
@@ -293,6 +305,13 @@ export default function Search() {
       <div style={{ marginBottom: '1.5rem' }}>
         <LibraryPlaylist />
       </div>
+
+      {/* Download progress for this search's downloads (persisted on server) */}
+      {batchId && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          <DownloadStatus batchId={batchId} />
+        </div>
+      )}
 
       {loading && (
         <div style={{ textAlign: 'center', padding: '3rem', color: theme.textMuted, fontSize: '1rem' }}>

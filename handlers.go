@@ -42,7 +42,8 @@ func handleStream(w http.ResponseWriter, r *http.Request) {
 	streamAudio(w, r)
 }
 
-// handleDownload starts an async single-song download.
+// handleDownload starts an async single-song download via the persisted
+// download manager, so its status is visible and survives refreshes.
 func handleDownload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "POST required", http.StatusMethodNotAllowed)
@@ -60,9 +61,15 @@ func handleDownload(w http.ResponseWriter, r *http.Request) {
 	if req.Organization == "" {
 		req.Organization = "artist_album"
 	}
-	startDownload(req)
+	batchID, err := enqueueDownloads(req.Organization, []DownloadItem{
+		{URL: req.URL, Artist: req.Artist, Album: req.Album},
+	})
+	if err != nil {
+		http.Error(w, "could not start download", http.StatusInternalServerError)
+		return
+	}
 	logActivity("download", "", "", req.Artist, "", req.URL, 0, false)
-	writeJSON(w, map[string]string{"status": "started", "url": req.URL})
+	writeJSON(w, map[string]string{"status": "started", "url": req.URL, "batch_id": batchID})
 }
 
 // handleLibrary returns the download folder grouped by artist and album.

@@ -260,25 +260,6 @@ func (fw *flushWriter) Write(p []byte) (int, error) {
 	return n, err
 }
 
-// startDownload kicks off an async yt-dlp download for a single URL.
-func startDownload(req DownloadReq) {
-	go func() {
-		defer syncDBWithDisk()
-		tmpl := outputTemplate(req.Organization, req.Artist, req.Album)
-		cmd := exec.Command(ytdlp,
-			"-x", "--audio-format", "mp3", "--audio-quality", audioQuality,
-			"--embed-thumbnail", "--embed-metadata", "--restrict-filenames",
-			"--no-playlist", "--no-warnings", "-o", tmpl, req.URL,
-		)
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			log.Printf("download error %s: %v\n%s", req.URL, err, string(out))
-			return
-		}
-		log.Printf("downloaded: %s", req.URL)
-	}()
-}
-
 // serveAudioFile serves a local audio file from downloadRoot, setting the
 // correct MIME type and enabling range requests. The requested path is
 // validated against dlRoot with os.Root so a crafted path cannot escape the

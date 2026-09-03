@@ -11,6 +11,7 @@ import PlayerBar from './components/PlayerBar'
 import ThemeAdjuster from './components/ThemeAdjuster'
 import LLMSettings from './components/LLMSettings'
 import MusicVisuals, { FloatingNotes } from './components/MusicVisuals'
+import DownloadStatus from './components/DownloadStatus'
 import gsap from 'gsap'
 
 function AppInner() {
@@ -112,6 +113,11 @@ function AppInner() {
           {tab === 'all' && <AllSongs />}
           {tab === 'library' && <Library />}
           {tab === 'activity' && <Activity />}
+        </div>
+
+        {/* Persistent download status (server-backed, survives refresh/tab switch) */}
+        <div style={{ marginTop: '1.5rem' }}>
+          <DownloadStatus compact />
         </div>
       </main>
 
