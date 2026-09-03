@@ -67,7 +67,7 @@ function AppInner() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <Header tab={tab} setTab={setTab} />
+      <Header />
       <FloatingNotes />
       <MusicVisuals />
 

@@ -1,11 +1,9 @@
 import { useTheme } from '../context/ThemeContext'
-import { usePlayer } from '../context/PlayerContext'
 import { useRef, useEffect } from 'react'
 import gsap from 'gsap'
 
-export default function Header({ tab, setTab }) {
+export default function Header() {
   const { theme, themes, themeName, switchTheme, custom } = useTheme()
-  const { current } = usePlayer()
   const logoRef = useRef(null)
 
   useEffect(() => {
@@ -21,19 +19,20 @@ export default function Header({ tab, setTab }) {
     }}>
       <div ref={logoRef} style={{ display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
         <div style={{
-          width: 36, height: 36, background: theme.text, color: theme.bg,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '1.05rem', fontWeight: 800, letterSpacing: '-1px', borderRadius: 10,
+          width: 38, height: 38, background: 'linear-gradient(135deg, #7c3aed, #db2777)',
+          color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '1.1rem', fontWeight: 800, letterSpacing: '-1px', borderRadius: 12,
+          boxShadow: '0 4px 12px rgba(124,58,237,0.35)',
         }}>
           ♫
         </div>
         <span style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.5px' }}>
-          DEV MUSIC
+          Dev Music
         </span>
         <span style={{
           fontSize: '0.6rem', fontWeight: 700, letterSpacing: '1px',
-          color: theme.textMuted, border: `1px solid ${theme.border}`,
-          padding: '0.1rem 0.4rem', borderRadius: 4, textTransform: 'uppercase',
+          color: '#fff', background: 'linear-gradient(135deg, #7c3aed, #db2777)',
+          padding: '0.12rem 0.45rem', borderRadius: 6, textTransform: 'uppercase',
         }}>
           AI
         </span>

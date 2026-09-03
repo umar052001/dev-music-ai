@@ -15,7 +15,6 @@ export default function Search({ externalQuery }) {
   const { theme } = useTheme()
   const { play, logAct } = usePlayer()
   const [query, setQuery] = useState('')
-  const [searchType, setSearchType] = useState('simple')
   const [org, setOrg] = useState('artist_album')
   const [allResults, setAllResults] = useState([])
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
@@ -54,7 +53,7 @@ export default function Search({ externalQuery }) {
       const res = await fetch('/api/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: searchQ.trim(), search_type: searchType, limit: 50 }),
+        body: JSON.stringify({ query: searchQ.trim(), limit: 50 }),
       })
       const data = await res.json()
       setAllResults(data.results || [])
@@ -76,7 +75,7 @@ export default function Search({ externalQuery }) {
       const res = await fetch('/api/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: q, search_type: searchType, limit: 50 }),
+        body: JSON.stringify({ query: q, limit: 50 }),
       })
       const data = await res.json()
       setAllResults(prev => {
@@ -135,17 +134,13 @@ export default function Search({ externalQuery }) {
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <input
             style={{ ...inputStyle, flex: 1, minWidth: 200 }}
-            placeholder="Search songs, artists, albums, or paste a playlist URL..."
+            placeholder="Search songs, artists, or albums..."
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && doSearch()}
             onFocus={e => { e.target.style.borderColor = theme.text; e.target.style.boxShadow = `0 0 0 3px ${theme.accent}22` }}
             onBlur={e => { e.target.style.borderColor = theme.inputBorder; e.target.style.boxShadow = 'none' }}
           />
-          <select style={{ ...inputStyle, width: 'auto', cursor: 'pointer' }} value={searchType} onChange={e => setSearchType(e.target.value)}>
-            <option value="simple">Songs</option>
-            <option value="playlist">Playlist / Album</option>
-          </select>
           <button onClick={() => doSearch()} disabled={loading} style={{
             background: theme.text, color: theme.bg, border: 'none',
             padding: '0.7rem 1.5rem', borderRadius: 8, fontSize: '1rem', fontWeight: 700,
@@ -162,7 +157,6 @@ export default function Search({ externalQuery }) {
             <select style={{ ...inputStyle, width: 'auto', padding: '0.4rem', fontSize: '0.85rem', borderRadius: 6 }} value={org} onChange={e => setOrg(e.target.value)}>
               <option value="artist_album">Artist / Album</option>
               <option value="artist_only">Artist Only</option>
-              <option value="playlist">Playlist</option>
             </select>
           </label>
           {allResults.length > 0 && (

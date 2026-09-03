@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTheme } from '../context/ThemeContext'
 import gsap from 'gsap'
+import LibraryPlaylist from './LibraryPlaylist'
 
 export default function Suggestions({ onSearch }) {
   const { theme } = useTheme()
@@ -165,6 +166,11 @@ export default function Suggestions({ onSearch }) {
             </button>
           </div>
         )}
+      </div>
+
+      {/* AI Playlist from downloaded songs */}
+      <div style={{ marginTop: '1rem' }}>
+        <LibraryPlaylist />
       </div>
     </div>
   )

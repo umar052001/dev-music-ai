@@ -1,4 +1,3 @@
-import { useTheme } from '../context/ThemeContext'
 import { usePlayer } from '../context/PlayerContext'
 import { useEffect, useRef } from 'react'
 import gsap from 'gsap'

@@ -73,7 +73,7 @@ function applyTheme(t) {
 }
 
 export function ThemeProvider({ children }) {
-  const [themeName, setThemeName] = useState(() => localStorage.getItem('devmusic-theme') || 'light')
+  const [themeName, setThemeName] = useState(() => localStorage.getItem('devmusic-theme') || 'dark')
   const [custom, setCustom] = useState(() => {
     try { return JSON.parse(localStorage.getItem('devmusic-custom')) || null } catch { return null }
   })
