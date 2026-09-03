@@ -17,25 +17,11 @@ export default function Header() {
       padding: '0.8rem 1.5rem',
       display: 'flex', alignItems: 'center', gap: '1rem',
     }}>
-      <div ref={logoRef} style={{ display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
-        <div style={{
-          width: 38, height: 38, background: 'linear-gradient(135deg, #7c3aed, #db2777)',
-          color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '1.1rem', fontWeight: 800, letterSpacing: '-1px', borderRadius: 12,
-          boxShadow: '0 4px 12px rgba(124,58,237,0.35)',
-        }}>
-          ♫
-        </div>
-        <span style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.5px' }}>
-          Dev Music
-        </span>
+      <div ref={logoRef} style={{ display: 'flex', alignItems: 'baseline', gap: '0.45rem' }}>
         <span style={{
-          fontSize: '0.6rem', fontWeight: 700, letterSpacing: '1px',
-          color: '#fff', background: 'linear-gradient(135deg, #7c3aed, #db2777)',
-          padding: '0.12rem 0.45rem', borderRadius: 6, textTransform: 'uppercase',
-        }}>
-          AI
-        </span>
+          fontSize: '1.35rem', fontWeight: 800, letterSpacing: '-0.02em',
+          color: theme.text, lineHeight: 1,
+        }}>Dev<span style={{ fontWeight: 300, color: theme.textSecondary }}>Music</span></span>
       </div>
 
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>

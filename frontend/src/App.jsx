@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ThemeProvider, useTheme } from './context/ThemeContext'
 import { PlayerProvider, usePlayer } from './context/PlayerContext'
 import Header from './components/Header'
 import Search from './components/Search'
 import AllSongs from './components/AllSongs'
 import Library from './components/Library'
-import Suggestions from './components/Suggestions'
 import Activity from './components/Activity'
 import BatchImport from './components/BatchImport'
 import PlayerBar from './components/PlayerBar'
@@ -22,7 +21,6 @@ function AppInner() {
   const [llmOpen, setLlmOpen] = useState(false)
   const [llmAvailable, setLlmAvailable] = useState(true)
   const [llmChecked, setLlmChecked] = useState(false)
-  const [externalQuery, setExternalQuery] = useState('')
   const contentRef = useRef(null)
 
   // Check LLM availability to decide whether to show AI tabs
@@ -42,15 +40,9 @@ function AppInner() {
     }
   }, [tab])
 
-  const handleSearchFromSuggestion = useCallback((q) => {
-    setExternalQuery(q)
-    setTab('search')
-  }, [])
-
   const allTabs = [
     { id: 'search', label: 'Search', ai: false },
     { id: 'batch', label: 'Batch Import', ai: true },
-    { id: 'suggest', label: 'For You', ai: true },
     { id: 'all', label: 'All Songs', ai: false },
     { id: 'library', label: 'Library', ai: false },
     { id: 'activity', label: 'Activity', ai: false },
@@ -115,9 +107,8 @@ function AppInner() {
         </div>
 
         <div ref={contentRef}>
-          {tab === 'search' && <Search externalQuery={externalQuery} />}
+          {tab === 'search' && <Search />}
           {tab === 'batch' && llmAvailable && <BatchImport />}
-          {tab === 'suggest' && llmAvailable && <Suggestions onSearch={handleSearchFromSuggestion} />}
           {tab === 'all' && <AllSongs />}
           {tab === 'library' && <Library />}
           {tab === 'activity' && <Activity />}

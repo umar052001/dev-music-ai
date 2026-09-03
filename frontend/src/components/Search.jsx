@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useTheme } from '../context/ThemeContext'
 import { usePlayer } from '../context/PlayerContext'
 import gsap from 'gsap'
+import LibraryPlaylist from './LibraryPlaylist'
 
 const QUICK = [
   'Pakistani classical music', 'Atif Aslam', 'Bilal Saeed',
@@ -11,7 +12,7 @@ const QUICK = [
 
 const PAGE_SIZE = 10
 
-export default function Search({ externalQuery }) {
+export default function Search() {
   const { theme } = useTheme()
   const { play, logAct } = usePlayer()
   const [query, setQuery] = useState('')
@@ -22,14 +23,19 @@ export default function Search({ externalQuery }) {
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
   const [downloading, setDownloading] = useState(new Set())
+  const [suggestions, setSuggestions] = useState([])
+  const [sugLoading, setSugLoading] = useState(true)
+  const [playlistQuery, setPlaylistQuery] = useState('')
+  const [playlist, setPlaylist] = useState(null)
+  const [playlistLoading, setPlaylistLoading] = useState(false)
   const listRef = useRef(null)
 
-  // Handle external query from suggestions
   useEffect(() => {
-    if (externalQuery) {
-      setQuery(externalQuery)
-    }
-  }, [externalQuery])
+    fetch('/api/suggestions')
+      .then(r => r.json())
+      .then(d => { setSuggestions(d.suggestions || []); setSugLoading(false) })
+      .catch(() => setSugLoading(false))
+  }, [])
 
   useEffect(() => {
     if (allResults.length && listRef.current) {
@@ -112,6 +118,24 @@ export default function Search({ externalQuery }) {
     }
   }
 
+  const generatePlaylist = async () => {
+    if (!playlistQuery.trim()) return
+    setPlaylistLoading(true)
+    try {
+      const res = await fetch('/api/playlist-suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: playlistQuery }),
+      })
+      const data = await res.json()
+      setPlaylist(data)
+    } catch {
+      setPlaylist(null)
+    } finally {
+      setPlaylistLoading(false)
+    }
+  }
+
   const inputStyle = {
     background: theme.inputBg, color: theme.text,
     border: `2px solid ${theme.inputBorder}`, padding: '0.7rem 1rem',
@@ -184,6 +208,90 @@ export default function Search({ externalQuery }) {
             {q}
           </button>
         ))}
+      </div>
+
+      {/* For You: AI suggestions + playlist builders, shown before a search */}
+      {!hasSearched && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+          {/* AI suggestions */}
+          <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 12, padding: '1.1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.7rem' }}>
+              <span style={{ fontSize: '1rem', fontWeight: 600 }}>Suggested for you</span>
+              <button onClick={() => {
+                setSugLoading(true)
+                fetch('/api/suggestions').then(r => r.json()).then(d => { setSuggestions(d.suggestions || []); setSugLoading(false) })
+              }} style={{
+                background: 'none', border: `1px solid ${theme.border}`, color: theme.textSecondary,
+                padding: '0.25rem 0.6rem', fontSize: '0.8rem', cursor: 'pointer', borderRadius: 6,
+              }}>↻ Refresh</button>
+            </div>
+            {sugLoading && <div style={{ padding: '0.6rem', color: theme.textMuted, fontSize: '0.9rem' }}>Analyzing your taste...</div>}
+            {!sugLoading && suggestions.length === 0 && (
+              <div style={{ padding: '0.6rem', color: theme.textMuted, fontSize: '0.9rem' }}>
+                Play some music to get personalized suggestions
+              </div>
+            )}
+            {suggestions.map((s, i) => (
+              <div key={i} onClick={() => { setQuery(s.query); setTimeout(() => doSearch(s.query), 0) }} style={{
+                display: 'flex', alignItems: 'center', gap: '0.7rem',
+                padding: '0.5rem 0.6rem', cursor: 'pointer',
+                borderBottom: i < suggestions.length - 1 ? `1px solid ${theme.border}` : 'none',
+                borderRadius: 6,
+              }}
+                onMouseEnter={e => e.currentTarget.style.background = theme.surfaceHover}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.92rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.query}</div>
+                  <div style={{ fontSize: '0.75rem', color: theme.textMuted, marginTop: 1 }}>{s.reason}</div>
+                </div>
+                <span style={{ fontSize: '0.85rem', color: theme.textMuted }}>→</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Playlist generator (search & download) */}
+          <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 12, padding: '1.1rem' }}>
+            <div style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.7rem' }}>Generate playlist</div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <input
+                style={{ flex: 1, background: theme.inputBg, color: theme.text, border: `2px solid ${theme.inputBorder}`, padding: '0.6rem 0.8rem', fontSize: '0.9rem', outline: 'none', borderRadius: 8 }}
+                placeholder="Describe a mood, e.g. 'chill evening'"
+                value={playlistQuery}
+                onChange={e => setPlaylistQuery(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && generatePlaylist()}
+                onFocus={e => e.target.style.borderColor = theme.text}
+                onBlur={e => e.target.style.borderColor = theme.inputBorder}
+              />
+              <button onClick={generatePlaylist} disabled={playlistLoading} style={{
+                background: theme.text, color: theme.bg, border: 'none',
+                padding: '0.6rem 1rem', fontSize: '0.85rem', fontWeight: 700,
+                borderRadius: 8, cursor: playlistLoading ? 'wait' : 'pointer', opacity: playlistLoading ? 0.6 : 1,
+              }}>
+                {playlistLoading ? '...' : 'Generate'}
+              </button>
+            </div>
+            {playlist && (
+              <div style={{ marginTop: '0.8rem', padding: '0.8rem', background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 8 }}>
+                <div style={{ fontSize: '1rem', fontWeight: 600 }}>{playlist.name}</div>
+                <div style={{ fontSize: '0.8rem', color: theme.textMuted, marginTop: '0.3rem' }}>
+                  {playlist.track_count} tracks · {playlist.mood}
+                </div>
+                <button onClick={() => { setQuery(playlist.query); setTimeout(() => doSearch(playlist.query), 0) }} style={{
+                  marginTop: '0.6rem', background: theme.text, color: theme.bg,
+                  border: 'none', padding: '0.5rem 1rem', fontSize: '0.82rem', fontWeight: 700, borderRadius: 8, cursor: 'pointer',
+                }}>
+                  Search & Download
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* AI playlist from your downloaded music, always accessible */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <LibraryPlaylist />
       </div>
 
       {loading && (

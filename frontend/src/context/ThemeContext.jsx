@@ -75,7 +75,7 @@ function applyTheme(t) {
 export function ThemeProvider({ children }) {
   const [themeName, setThemeName] = useState(() => localStorage.getItem('devmusic-theme') || 'dark')
   const [custom, setCustom] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('devmusic-custom')) || null } catch { return null }
+    try { return JSON.parse(localStorage.getItem('devmusic-custom-v2')) || null } catch { return null }
   })
 
   const theme = custom || THEMES[themeName] || THEMES.light
@@ -91,7 +91,7 @@ export function ThemeProvider({ children }) {
   }, [themeName])
 
   useEffect(() => {
-    if (custom) localStorage.setItem('devmusic-custom', JSON.stringify(custom))
+    if (custom) localStorage.setItem('devmusic-custom-v2', JSON.stringify(custom))
   }, [custom])
 
   const switchTheme = (name) => {
